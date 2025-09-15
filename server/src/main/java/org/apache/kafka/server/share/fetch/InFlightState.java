@@ -219,6 +219,21 @@ public class InFlightState {
      */
     public void completeStateTransition(boolean commit) {
         if (commit || isTerminalState) {
+            // If the acquisition lock has already expired, enforce strict timeout semantics:
+            // do not allow a successful commit to override expiration.
+            if (acquisitionLockTimeoutTask != null && acquisitionLockTimeoutTask.hasExpired()) {
+                InFlightState previousState = rollbackState == null ? null : rollbackState.state();
+                if (previousState != null) {
+                    // If the timeout has fired, mark the record as AVAILABLE unless the
+                    // delivery count has reached the max delivery count, in which case ARCHIVE it.
+                    state = previousState.deliveryCount() >= rollbackState.maxDeliveryCount ?
+                        RecordState.ARCHIVED : RecordState.AVAILABLE;
+                    memberId = EMPTY_MEMBER_ID;
+                }
+                cancelAndClearAcquisitionLockTimeoutTask();
+                rollbackState = null;
+                return;
+            }
             // Cancel the acquisition lock timeout task for the state since it is acknowledged/released successfully.
             cancelAndClearAcquisitionLockTimeoutTask();
             rollbackState = null;
