@@ -1735,7 +1735,7 @@ public class SharePartition {
 
     private int acquireSubsetBatchRecords(
         String memberId,
-        boolean recordLimit,
+        boolean isRecordLimitMode,
         long maxFetchRecords,
         long requestFirstOffset,
         long requestLastOffset,
@@ -1782,8 +1782,8 @@ public class SharePartition {
                     .setLastOffset(offsetState.getKey())
                     .setDeliveryCount((short) offsetState.getValue().deliveryCount()));
                 acquiredCount++;
-                if (recordLimit && acquiredCount >= maxFetchRecords) {
-                    // In recordLimit mode, acquire only the requested number of records.
+                if (isRecordLimitMode && acquiredCount >= maxFetchRecords) {
+                    // In record_limit mode, acquire only the requested number of records.
                     break;
                 }
             }
